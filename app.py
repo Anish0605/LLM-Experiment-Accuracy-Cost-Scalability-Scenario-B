@@ -326,8 +326,9 @@ def reverse_schema_aliases(row: dict[str, Any]) -> dict[str, Any]:
         if key == "record_key":
             continue
         normalized_key = str(key).strip().lower()
-        field = normalized.get(normalized_key, normalized_key) if False else normalized_key
-        field = reverse.get(field, field.replace(" ", "_"))
+        field = reverse.get(normalized_key)
+        if field is None:
+            field = normalized_key.replace(" ", "_")
         if field in FIELDS:
             canonical[field] = value
     return canonical
@@ -709,7 +710,12 @@ def main():
                                 meta = failed_call(rows, model, exc, time.perf_counter() - start)
                             st.session_state.llm_calls.append(meta)
                             for rid in batch_ids:
-                                st.session_state.llm_outputs[rid] = out.get(rid, {})
+                                # Store only returned records. Missing outputs can then be retried
+                                # by pressing Run / extend again, and remain visible as failures.
+                                if rid in out:
+                                    st.session_state.llm_outputs[rid] = out[rid]
+                                else:
+                                    st.session_state.llm_outputs.pop(rid, None)
                                 st.session_state.model_meta[rid] = meta
                             status.write(f"Batch {bi}/{len(batches)} · {sum(bool(out.get(rid)) for rid in batch_ids)} valid record outputs returned.")
                             progress.progress(bi / len(batches))
