@@ -619,7 +619,7 @@ def main():
                 st.dataframe(pd.DataFrame({"Rule": list(st.session_state.eligibility_counts), "Rows passing": list(st.session_state.eligibility_counts.values())}), use_container_width=True, hide_index=True)
             left, right = st.columns([1, 1.3])
             with left:
-                size = st.selectbox("Records in benchmark", [20, 50, 100, 200], index=2)
+                size = st.selectbox("Records in benchmark", [20, 50, 100, 250, 500], index=4)
                 seed = st.number_input("Random seed", 1, 999999, 42, 1)
                 st.caption("Use the same seed for reproducibility. Building a new benchmark clears current outputs.")
                 if st.button("Build / reset Scenario B benchmark", type="primary", disabled=len(eligible) < size, use_container_width=True):
@@ -687,9 +687,9 @@ def main():
             with col3:
                 st.markdown("#### C. Grok-assisted")
                 st.write("Model uses canonical schema semantics, not the explicit alias mapping table.")
-                target = st.select_slider("LLM records to process", options=[n for n in [20, 50, 100, 200] if n <= len(ids)], value=min(20, len(ids)))
+                target = st.select_slider("LLM records to process", options=[n for n in [20, 50, 100, 250, 500] if n <= len(ids)], value=min(20, len(ids)))
                 batch_size = st.selectbox("Records per API request", [1, 5], index=1)
-                st.caption("Start with 20; extend only after reviewing costs and errors.")
+                st.caption("Build one 500-record benchmark (seed 42 for the final comparison), run both rule pipelines over all records, then run Grok cumulatively: 20 → 50 → 100 → 250 → 500. Do not rebuild between extensions; export audit files after important runs.")
                 if st.button("Run / extend Grok experiment", disabled=not key, type="primary", use_container_width=True):
                     client = OpenAI(api_key=key, base_url="https://api.x.ai/v1")
                     targets = ids[:int(target)]
@@ -730,7 +730,7 @@ def main():
         else:
             ids = list(st.session_state.gold)
             summary = []
-            for n in [20, 50, 100, 200]:
+            for n in [20, 50, 100, 250, 500]:
                 if n > len(ids):
                     continue
                 subset = ids[:n]
@@ -854,7 +854,7 @@ def main():
             {"Item": "Arm B", "Specification": "Deterministic parser with predeclared schema alias and categorical alias tables."},
             {"Item": "Arm C", "Specification": "Grok with canonical field descriptions and observed canonical vocabularies; no explicit alias-to-value lookup."},
             {"Item": "Metrics", "Specification": "Field and complete-record accuracy, observed wall time, throughput, token use, reference-priced service-equivalent cost and API errors."},
-            {"Item": "Current sample sizes", "Specification": "20, 50, 100 or 200 records as actually run; no extrapolation."},
+            {"Item": "Current sample sizes", "Specification": "20, 50, 100, 250 and 500 records when actually run; no extrapolation."},
         ]
         st.dataframe(pd.DataFrame(protocol), use_container_width=True, hide_index=True)
         st.markdown("#### Limitations and research integrity")
